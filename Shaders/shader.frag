@@ -9,5 +9,5 @@ layout(location = 0) out vec4 outColor;
 
 void main() 
 {
-    outColor = pixelColor.rgbr * texture(texSampler, pixelUV * 2.0f);
+    outColor = pixelColor.rgbr * texture(texSampler, pixelUV);
 }

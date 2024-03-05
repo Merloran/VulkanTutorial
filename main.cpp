@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-
 #undef max
 #undef min
 #include <vulkan/vulkan.h>
@@ -19,8 +18,12 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 #include "Types.hpp"
 
@@ -92,7 +95,26 @@ struct Vertex
 
         return attributeDescriptions;
     }
+
+    Bool operator==(const Vertex &other) const
+	{
+        return position == other.position && color == other.color && uv == other.uv;
+    }
 };
+
+namespace std
+{
+    template<>
+	struct hash<Vertex>
+	{
+        size_t operator()(Vertex const &vertex) const
+    	{
+            return ((hash<glm::vec3>()(vertex.position) ^
+                    (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.uv) << 1);
+        }
+    };
+}
 
 struct UniformBufferObject
 {
@@ -106,25 +128,6 @@ struct SwapChainSupportDetails
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
     VkSurfaceCapabilitiesKHR capabilities;
-};
-
-const std::vector<Vertex> vertices = 
-{
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<UInt16> indices = 
-{
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
 };
 
 class HelloTriangleApplication
@@ -142,6 +145,7 @@ private:
     const std::string GLSL_COMPILER_PATH = "D:/VulkanSDK/Bin/glslc.exe";
     const std::string SHADERS_PATH = "Shaders/";
     const std::string TEXTURES_PATH = "Textures/";
+    const std::string MODELS_PATH = "Models/";
     std::vector<std::string> shaderFiles = 
     {
         "shader.vert",
@@ -176,8 +180,11 @@ private:
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
     VkImageView textureImageView;
-
     VkSampler textureSampler;
+
+    std::vector<Vertex> vertices;
+    std::vector<UInt32> indices;
+
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
     VkBuffer indexBuffer;
@@ -226,6 +233,7 @@ private:
         create_texture_image();
         create_texture_image_view();
         create_texture_sampler();
+        load_model();
         create_vertex_buffer();
         create_index_buffer();
         create_uniform_buffers();
@@ -1066,7 +1074,8 @@ private:
     Void create_texture_image()
 	{
         Int32 texWidth, texHeight, texChannels;
-        stbi_uc *pixels = stbi_load("textures/texture.jpg", 
+        stbi_set_flip_vertically_on_load(true);
+        stbi_uc *pixels = stbi_load((MODELS_PATH + "viking_room/viking_room.png").c_str(), 
                                     &texWidth, 
                                     &texHeight, 
                                     &texChannels, 
@@ -1321,6 +1330,50 @@ private:
         if (vkCreateSampler(logicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create texture sampler!");
+        }
+    }
+
+    Void load_model()
+	{
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, (MODELS_PATH + "viking_room/viking_room.obj").c_str()))
+        {
+            throw std::runtime_error(warn + err);
+        }
+
+        std::unordered_map<Vertex, UInt32> uniqueVertices{};
+        for (const tinyobj::shape_t &shape : shapes) 
+        {
+            for (const tinyobj::index_t &index : shape.mesh.indices) 
+            {
+                Vertex vertex{};
+                vertex.position = 
+                {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                };
+
+                vertex.uv = 
+                {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+
+                vertex.color = { 1.0f, 1.0f, 1.0f };
+
+                if (uniqueVertices.count(vertex) == 0)
+                {
+                    uniqueVertices[vertex] = static_cast<UInt32>(vertices.size());
+                    vertices.push_back(vertex);
+                }
+
+                indices.push_back(uniqueVertices[vertex]);
+            }
         }
     }
 
@@ -1756,7 +1809,7 @@ private:
         VkBuffer vertexBuffers[] = { vertexBuffer };
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         VkViewport viewport{};
         viewport.x        = 0.0f;
@@ -1826,7 +1879,7 @@ private:
         ubo.model = glm::rotate(glm::mat4(1.0f),
                                 time * glm::radians(90.0f), 
                                 glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.model = glm::scale(ubo.model, glm::vec3(2.0f));
+        //ubo.model = glm::scale(ubo.model, glm::vec3(2.0f));
         ubo.view = glm::lookAt(glm::vec3(2.0f), 
                                glm::vec3(0.0f, 0.0f, 0.0f), 
                                glm::vec3(0.0f, 0.0f, 1.0f));
