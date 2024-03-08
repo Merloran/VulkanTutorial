@@ -299,9 +299,9 @@ private:
         create_color_resources();
         //create_depth_resources();
         create_framebuffers();
-        //create_texture_image();
-        //create_texture_image_view();
-        //create_texture_sampler();
+        create_texture_image();
+        create_texture_image_view();
+        create_texture_sampler();
         //load_model();
         //create_vertex_buffer();
         //create_index_buffer();
@@ -852,30 +852,30 @@ private:
 
     Void create_descriptor_set_layout()
 	{
-        std::array<VkDescriptorSetLayoutBinding, 3> layoutBindings{};
+        std::array<VkDescriptorSetLayoutBinding, 4> layoutBindings{};
         layoutBindings[0].binding            = 0;
         layoutBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         layoutBindings[0].descriptorCount    = 1;
         layoutBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
         layoutBindings[0].pImmutableSamplers = nullptr; // Optional
         
-        //layoutBindings[1].binding            = 1;
-        //layoutBindings[1].descriptorCount    = 1;
-        //layoutBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        //layoutBindings[1].pImmutableSamplers = nullptr;
-        //layoutBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-        
         layoutBindings[1].binding            = 1;
         layoutBindings[1].descriptorCount    = 1;
-        layoutBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         layoutBindings[1].pImmutableSamplers = nullptr;
-        layoutBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+        layoutBindings[1].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
         
         layoutBindings[2].binding            = 2;
         layoutBindings[2].descriptorCount    = 1;
         layoutBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         layoutBindings[2].pImmutableSamplers = nullptr;
         layoutBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+        
+        layoutBindings[3].binding            = 3;
+        layoutBindings[3].descriptorCount    = 1;
+        layoutBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        layoutBindings[3].pImmutableSamplers = nullptr;
+        layoutBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1850,10 +1850,10 @@ private:
             uniformBufferInfo.offset = 0;
             uniformBufferInfo.range  = sizeof(UniformBufferObject);
 
-            //VkDescriptorImageInfo imageInfo{};
-            //imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            //imageInfo.imageView   = textureImageView;
-            //imageInfo.sampler     = textureSampler;
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView   = textureImageView;
+            imageInfo.sampler     = textureSampler;
 
             VkDescriptorBufferInfo storageBufferInfoLastFrame{};
             storageBufferInfoLastFrame.buffer = shaderStorageBuffers[(i - 1) % MAX_FRAMES_IN_FLIGHT];
@@ -1865,7 +1865,7 @@ private:
             storageBufferInfoCurrentFrame.offset = 0;
             storageBufferInfoCurrentFrame.range  = sizeof(Particle) * PARTICLE_COUNT;
 
-            std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+            std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
             
             descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[0].dstSet           = descriptorSets[i];
@@ -1875,21 +1875,13 @@ private:
             descriptorWrites[0].descriptorCount  = 1;
             descriptorWrites[0].pBufferInfo      = &uniformBufferInfo;
 
-            //descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            //descriptorWrites[1].dstSet           = descriptorSets[i];
-            //descriptorWrites[1].dstBinding       = 1;
-            //descriptorWrites[1].dstArrayElement  = 0;
-            //descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            //descriptorWrites[1].descriptorCount  = 1;
-            //descriptorWrites[1].pImageInfo       = &imageInfo;
-
             descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[1].dstSet           = descriptorSets[i];
             descriptorWrites[1].dstBinding       = 1;
             descriptorWrites[1].dstArrayElement  = 0;
-            descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorWrites[1].descriptorCount  = 1;
-            descriptorWrites[1].pBufferInfo      = &storageBufferInfoLastFrame;
+            descriptorWrites[1].pImageInfo       = &imageInfo;
 
             descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrites[2].dstSet           = descriptorSets[i];
@@ -1897,7 +1889,15 @@ private:
             descriptorWrites[2].dstArrayElement  = 0;
             descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrites[2].descriptorCount  = 1;
-            descriptorWrites[2].pBufferInfo      = &storageBufferInfoCurrentFrame;
+            descriptorWrites[2].pBufferInfo      = &storageBufferInfoLastFrame;
+
+            descriptorWrites[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrites[3].dstSet           = descriptorSets[i];
+            descriptorWrites[3].dstBinding       = 3;
+            descriptorWrites[3].dstArrayElement  = 0;
+            descriptorWrites[3].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrites[3].descriptorCount  = 1;
+            descriptorWrites[3].pBufferInfo      = &storageBufferInfoCurrentFrame;
 
             vkUpdateDescriptorSets(logicalDevice, 
                                    static_cast<UInt32>(descriptorWrites.size()),
@@ -2427,10 +2427,10 @@ private:
 	{
         cleanup_swap_chain();
 
-        //vkDestroySampler(logicalDevice, textureSampler, nullptr);
-        //vkDestroyImageView(logicalDevice, textureImageView, nullptr);
-        //vkDestroyImage(logicalDevice, textureImage, nullptr);
-        //vkFreeMemory(logicalDevice, textureImageMemory, nullptr);
+        vkDestroySampler(logicalDevice, textureSampler, nullptr);
+        vkDestroyImageView(logicalDevice, textureImageView, nullptr);
+        vkDestroyImage(logicalDevice, textureImage, nullptr);
+        vkFreeMemory(logicalDevice, textureImageMemory, nullptr);
 
         for (UInt64 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) 
         {
