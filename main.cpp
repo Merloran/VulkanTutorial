@@ -297,7 +297,7 @@ private:
         create_compute_pipeline();
         create_command_pool();
         create_color_resources();
-        //create_depth_resources();
+        create_depth_resources();
         create_framebuffers();
         create_texture_image();
         create_texture_image_view();
@@ -789,52 +789,52 @@ private:
         colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         
         
-        //VkAttachmentDescription depthAttachment{};
-        //depthAttachment.format         = find_depth_format();
-        //depthAttachment.samples        = msaaSamples;
-        //depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        //depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        //depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        //depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        //depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-        //depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        //
-        //VkAttachmentReference depthAttachmentRef{};
-        //depthAttachmentRef.attachment = 1;
-        //depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        //
-        //
         VkAttachmentDescription colorAttachmentResolve{};
-        colorAttachmentResolve.format = swapChainImageFormat;
-        colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachmentResolve.format         = swapChainImageFormat;
+        colorAttachmentResolve.samples        = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachmentResolve.loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachmentResolve.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachmentResolve.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachmentResolve.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachmentResolve.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         
         VkAttachmentReference colorAttachmentResolveRef{};
         colorAttachmentResolveRef.attachment = 1;
-        colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentResolveRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+        VkAttachmentDescription depthAttachment{};
+        depthAttachment.format         = find_depth_format();
+        depthAttachment.samples        = msaaSamples;
+        depthAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = 2;
+        depthAttachmentRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount    = 1;
         subpass.pColorAttachments       = &colorAttachmentRef;
-        //subpass.pDepthStencilAttachment = &depthAttachmentRef;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
         subpass.pResolveAttachments     = &colorAttachmentResolveRef;
 
         VkSubpassDependency dependency{};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;// | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;// | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-        std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, colorAttachmentResolve };// , depthAttachment};
+        std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, colorAttachmentResolve, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount = static_cast<UInt32>(attachments.size());
@@ -957,7 +957,7 @@ private:
         depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable       = VK_TRUE;
         depthStencil.depthWriteEnable      = VK_TRUE;
-        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.minDepthBounds        = 0.0f; // Optional
         depthStencil.maxDepthBounds        = 1.0f; // Optional
@@ -1133,13 +1133,14 @@ private:
 	{
         swapChainFramebuffers.resize(swapChainImageViews.size());
 
-        for (UInt64 i = 0; i < swapChainImageViews.size(); i++) 
+        for (UInt64 i = 0; i < swapChainImageViews.size(); ++i) 
         {
-            std::array<VkImageView, 2> attachments =
+            // ORDER HERE MUST MATCH ORDER IN CREATE RENDER PASS ATTACHMENTS NUMBERS
+            std::array<VkImageView, 3> attachments =
             {
             	colorImageView,
-				//depthImageView,
-                swapChainImageViews[i]
+                swapChainImageViews[i],
+                depthImageView
             };
 
             VkFramebufferCreateInfo framebufferInfo{};
@@ -2208,9 +2209,9 @@ private:
         }
 
         VkRenderPassBeginInfo renderPassInfo{};
-        std::array<VkClearValue, 2> clearValues{};
+        std::array<VkClearValue, 3> clearValues{};
         clearValues[0].color        = { {0.0f, 0.0f, 0.0f, 1.0f} };
-        clearValues[1].depthStencil = { 1.0f, 0 };
+        clearValues[2].depthStencil = { 1.0f, 0 };
         
         renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass        = renderPass;
@@ -2322,7 +2323,7 @@ private:
         create_swap_chain();
         create_image_views();
         create_color_resources();
-        //create_depth_resources();
+        create_depth_resources();
         create_framebuffers();
     }
 
@@ -2405,10 +2406,10 @@ private:
         vkDestroyImageView(logicalDevice, colorImageView, nullptr);
         vkDestroyImage(logicalDevice, colorImage, nullptr);
         vkFreeMemory(logicalDevice, colorImageMemory, nullptr);
-        //
-        //vkDestroyImageView(logicalDevice, depthImageView, nullptr);
-        //vkDestroyImage(logicalDevice, depthImage, nullptr);
-        //vkFreeMemory(logicalDevice, depthImageMemory, nullptr);
+        
+        vkDestroyImageView(logicalDevice, depthImageView, nullptr);
+        vkDestroyImage(logicalDevice, depthImage, nullptr);
+        vkFreeMemory(logicalDevice, depthImageMemory, nullptr);
 
         for (VkFramebuffer &framebuffer : swapChainFramebuffers)
         {

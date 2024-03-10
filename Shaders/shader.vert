@@ -18,7 +18,7 @@ layout(location = 0) out vec3 pixelColor;
 void main() 
 {
     gl_PointSize = 14.0f;
-    gl_Position = vec4(inPosition.xy, 1.0, 1.0);
+    gl_Position = vec4(inPosition.xy, 1.0f, 1.0f);
     pixelColor = inColor.rgb;
 	//pixelUV = inUV;
 }
