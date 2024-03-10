@@ -180,6 +180,7 @@ public:
     }
 
 private:
+    #pragma region Variables
     const std::string GLSL_COMPILER_PATH = "D:/VulkanSDK/Bin/glslc.exe";
     const std::string SHADERS_PATH = "Shaders/";
     const std::string TEXTURES_PATH = "Textures/";
@@ -265,6 +266,7 @@ private:
     UInt32 currentFrame = 0;
     Float32 lastFrameTime = 0.0f;
     Bool framebufferResized = false;
+	#pragma endregion Variables
 
     // Methods are arranged in call order, but methods like s_debug_callback is before shutdown
     // because it could be not called and this is something like helper method and shutdown is 
